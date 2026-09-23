@@ -1,13 +1,17 @@
+
 install:
 
 run:
-	python3 a_maze_ing.py config.txt
+	@python3 a_maze_ing.py config.txt
 
 debug:
 
 clean:
-	rm -rf .ruff_cache && rm -rf .mypy_cache
+	rm -rf io_utils/__pycache__ messages/__pycache__
 
 lint:
+	flake8 . and mypy . --warn-return-any --warn-unused-ignores
+	--ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
+	flake8 . && mypy --strict .
