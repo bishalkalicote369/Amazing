@@ -7,7 +7,7 @@ run:
 debug:
 
 clean:
-	rm -rf io_utils/__pycache__ messages/__pycache__
+	rm -rf io_utils/__pycache__ 
 
 lint:
 	flake8 . and mypy . --warn-return-any --warn-unused-ignores

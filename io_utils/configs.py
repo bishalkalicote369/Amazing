@@ -192,12 +192,36 @@ def _parse_opt(key: str | None, value: str | None) -> int | None:
         return None
 
     try:
+        if int(value.strip()) < 0:
+            raise ValueError("Coordinates must be positive")
         return int(value.strip())
     except ValueError as error:
         raise ValueError(
-            f"Invalid integer value {value!r} {key}."
-            f"Value must be a valid integer string. {error}"
+            f"Invalid integer value {value} {key}."
+            f" Value must be a valid integer string. {error}"
         )
+
+
+def _parse_file_name(key: str, value: str) -> str:
+    """
+    Ensure that file is ready to be written
+
+    Args:
+        key: output file key
+        value: normally file name to write the output
+
+    Return:
+        the valid file name ends with .txt
+
+    Raises:
+        value error  if extension does not match .txt
+    """
+    if not value.strip():
+        raise ValueError("File name needed to write the output of the maze")
+
+    if not value.strip().endswith(".txt"):
+        raise ValueError(f"{key} doesn't have extension to write in the file")
+    return value
 
 
 def load_config(file_path: str) -> ConfigModel:
@@ -223,12 +247,13 @@ def load_config(file_path: str) -> ConfigModel:
     width = _parse_positive_int("WIDTH", raw_config["WIDTH"])
     entry = _parse_coordinates("ENTRY", raw_config["ENTRY"])
     exit = _parse_coordinates("EXIT", raw_config["EXIT"])
+    output_file = _parse_file_name("OUTPUT_FILE", raw_config["OUTPUT_FILE"])
     perfect = _parse_bool("PERFECT", raw_config["PERFECT"])
     seed = _parse_opt("SEED", raw_config.get("SEED"))
 
     return ConfigModel(
         width, height,
         entry, exit,
-        raw_config["OUTPUT_FILE"],
+        output_file,
         perfect, seed
     )

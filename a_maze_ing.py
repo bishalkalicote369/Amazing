@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import sys
-from messages import MISSING_ARGUMENT
 from io_utils import load_config, ConfigModel
 
 
 EXIT_OK = 0
 EXIT_MALFORMED = 1
+MISSING_ARGUMENT = """Error: missing required argument
+
+Usage:
+    python3 a_maze_ing.py <file_name.txt>
+
+Example:
+    python3 a_maze_ing.py maze.txt"""
 
 
 def main() -> int:
@@ -24,13 +30,7 @@ def main() -> int:
         return EXIT_MALFORMED
     try:
         config: ConfigModel = load_config(sys.argv[1])
-        print(config.HEIGHT)
-        print(config.WIDTH)
-        print(config.ENTRY)
-        print(config.EXIT)
-        print(config.OUTPUT_FILE)
-        print(config.PERFECT)
-        print(config.SEED)
+        print(config)
     except FileNotFoundError as ERROR:
         print(ERROR)
     except PermissionError as ERROR:
