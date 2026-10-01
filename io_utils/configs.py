@@ -1,11 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Optional
 
 
-@dataclass
+@dataclass(frozen=True)
 class ConfigModel:
     """
-    Validated configuration for the maze
+    Configuration for maze generation
     """
     HEIGHT: int
     WIDTH: int
@@ -13,7 +14,7 @@ class ConfigModel:
     EXIT: tuple[int, int]
     OUTPUT_FILE: str
     PERFECT: bool = True
-    SEED: int | None = None
+    SEED: Optional[int | None] = None
 
 
 def _parse_key_values(file_path: str) -> dict[str, str]:
@@ -100,9 +101,17 @@ def _parse_positive_int(key: str, value: str) -> int:
         ValueError if value is negative and failed in type cast
     """
 
-    if int(value) <= 0:
+    try:
+        parsed_value = int(value.strip())
+    except ValueError as error:
+        raise ValueError(
+            f"{key} must be a valid integer string."
+        ) from error
+
+    if parsed_value <= 0:
         raise ValueError(f"{key} must be positive")
-    return int(value)
+
+    return parsed_value
 
 
 def _parse_coordinates(key: str, value: str) -> tuple[int, int]:
@@ -188,18 +197,20 @@ def _parse_opt(key: str | None, value: str | None) -> int | None:
     Raises:
         ValueError if value is negative and failed in type cast
     """
-    if value is None or value.strip == "":
+    if value is None or not value.strip():
         return None
 
     try:
-        if int(value.strip()) < 0:
-            raise ValueError("Coordinates must be positive")
-        return int(value.strip())
+        parsed_value = int(value.strip())
     except ValueError as error:
         raise ValueError(
-            f"Invalid integer value {value} {key}."
-            f" Value must be a valid integer string. {error}"
-        )
+            f"{key} must be a valid integer string."
+        ) from error
+
+    if parsed_value <= 0:
+        raise ValueError(f"{key} must be positive")
+
+    return parsed_value
 
 
 def _parse_file_name(key: str, value: str) -> str:
@@ -222,6 +233,11 @@ def _parse_file_name(key: str, value: str) -> str:
     if not value.strip().endswith(".txt"):
         raise ValueError(f"{key} doesn't have extension to write in the file")
     return value
+
+
+def _in_bounds(height: int, width: int, coordinates: tuple[int, int]) -> bool:
+    row, col = coordinates
+    return 0 <= row < height and 0 <= col < width
 
 
 def load_config(file_path: str) -> ConfigModel:
@@ -250,10 +266,20 @@ def load_config(file_path: str) -> ConfigModel:
     output_file = _parse_file_name("OUTPUT_FILE", raw_config["OUTPUT_FILE"])
     perfect = _parse_bool("PERFECT", raw_config["PERFECT"])
     seed = _parse_opt("SEED", raw_config.get("SEED"))
+    if not _in_bounds(height, width, entry) and not _in_bounds(height, width, entry):
+        print("Entry and Exit should be in maze bounds")
+        return
+
+    if entry == exit:
+        print("Entry and Exit should be different")
+        return
 
     return ConfigModel(
-        width, height,
-        entry, exit,
-        output_file,
-        perfect, seed
+        WIDTH=width,
+        HEIGHT=height,
+        ENTRY=entry,
+        EXIT=exit,
+        OUTPUT_FILE=output_file,
+        PERFECT=perfect,
+        SEED=seed
     )

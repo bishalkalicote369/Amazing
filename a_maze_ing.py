@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import sys
+from sys import exit, argv
 from io_utils import load_config, ConfigModel
+from src import MazeGenerator
 
 
 EXIT_OK = 0
@@ -25,21 +26,24 @@ def main() -> int:
     Returns:
         int: EXIT_OK on success, or EXIT_MALFORMED if the argument is invalid.
     """
-    if len(sys.argv) != 2:
+    if len(argv) != 2:
         print(MISSING_ARGUMENT)
         return EXIT_MALFORMED
+
     try:
-        config: ConfigModel = load_config(sys.argv[1])
-        print(config)
+        amazeing = MazeGenerator(argv[1])
+        amazeing.grid_init()
+        amazeing.show_maze()
     except FileNotFoundError as ERROR:
         print(ERROR)
     except PermissionError as ERROR:
         print(ERROR)
     except ValueError as ERROR:
         print(ERROR)
-
+    except Exception as ERROR:
+        print(ERROR)
     return EXIT_OK
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    exit(main())
