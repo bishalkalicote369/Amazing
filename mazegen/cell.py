@@ -16,7 +16,7 @@ class Direction(IntFlag):
         return OPPOSITE[self]
 
     @property
-    def step(self) -> Cell:
+    def step(self) -> tuple[int, int]:
         """the (row, col) offset to the neihbour on  this side"""
         return STEP[self]
 

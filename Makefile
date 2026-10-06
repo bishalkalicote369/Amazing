@@ -7,11 +7,11 @@ run:
 debug:
 
 clean:
-	rm -rf io_utils/__pycache__  src/__pycache__
+	@rm -rf io_utils/__pycache__  mazegen/__pycache__
 
 lint:
-	flake8 . and mypy . --warn-return-any --warn-unused-ignores
+	@flake8 . and mypy . --warn-return-any --warn-unused-ignores
 	--ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 lint-strict:
-	flake8 . && mypy --strict .
+	@flake8 . && mypy --strict .

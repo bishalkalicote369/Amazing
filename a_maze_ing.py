@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from sys import exit, argv
-from io_utils import load_config, ConfigModel
-from src import MazeGenerator
+from mazegen import MazeGenerator
 
 
 EXIT_OK = 0
@@ -32,8 +31,9 @@ def main() -> int:
 
     try:
         amazeing = MazeGenerator(argv[1])
-        amazeing.grid_init()
-        amazeing.show_maze()
+        start = amazeing.grid[0][0]
+        amazeing.dfs(start)
+        amazeing.print_maze()
     except FileNotFoundError as ERROR:
         print(ERROR)
     except PermissionError as ERROR:

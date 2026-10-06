@@ -266,10 +266,13 @@ def load_config(file_path: str) -> ConfigModel:
     output_file = _parse_file_name("OUTPUT_FILE", raw_config["OUTPUT_FILE"])
     perfect = _parse_bool("PERFECT", raw_config["PERFECT"])
     seed = _parse_opt("SEED", raw_config.get("SEED"))
-    if not _in_bounds(height, width, entry) and not _in_bounds(height, width, entry):
-        print("Entry and Exit should be in maze bounds")
-        return
 
+    if not _in_bounds(height, width, entry):
+        print("Entry should be in maze bounds")
+        return
+    if not _in_bounds(height, width, exit):
+        print("Exit should be in maze bounds")
+        return
     if entry == exit:
         print("Entry and Exit should be different")
         return

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from typing import Final
-from random import randint
-from io_utils import ConfigModel, load_config
+from random import (
+    randint,
+    seed,
+    shuffle
+)
+from io_utils import (
+    ConfigModel,
+    load_config
+)
 from .cell import (
     Cell,
-    STEP,
-    WALLS,
-    OPPOSITE,
     Direction,
 )
 
@@ -28,11 +32,13 @@ class MazeGenerator:
             if self.config.SEED is not None
             else randint(0, 1000)
         )
-
+        seed(self.seed)
         self.grid = self.grid_init()
 
     def grid_init(self):
+
         grid = []
+
         for row in range(self.height):
             current_row = []
             for col in range(self.width):
@@ -40,19 +46,25 @@ class MazeGenerator:
             grid.append(current_row)
         return grid
 
-    # def add_pattern(self):
-    #     pattern = [
-    #         "#   ###",
-    #         "#     #",
-    #         "### ###",
-    #         "  # #  ",
-    #         "  # ###"
-    #     ]
+    def dfs(self, cell: Cell):
 
+        current_cell = self.grid[cell.row][cell.col]
+        current_cell.visited = True
 
-    # def show_maze(self):
-    #     for row in self.grid:
-    #         for cell in row:
-    #             # print(f"({cell.row},{cell.col})", end=" ")
-    #             # print(cell.walls - dir)
-    #         print(end="\n\n")
+        directions = list(Direction)
+        shuffle(directions)
+
+        for direction in directions:
+            new_row = current_cell.row + direction.step[0]
+            new_col = current_cell.col + direction.step[1]
+
+            if not 0 <= new_row < self.height or not 0 <= new_col < self.width:
+                continue
+
+            neighbor = self.grid[new_row][new_col]
+
+            if not neighbor.visited:
+                current_cell.walls = current_cell.walls & ~direction
+                neighbor.walls = neighbor.walls & ~direction.opposite
+
+                self.dfs(neighbor)
