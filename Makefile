@@ -7,7 +7,7 @@ run:
 debug:
 
 clean:
-	@rm -rf io_utils/__pycache__  mazegen/__pycache__
+	@rm -rf io_utils/__pycache__  mazegen/__pycache__ mazegen/.mypy_cache  .mypy_cache
 
 lint:
 	@flake8 . and mypy . --warn-return-any --warn-unused-ignores

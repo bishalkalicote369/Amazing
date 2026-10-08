@@ -6,10 +6,6 @@ from random import (
     seed,
     shuffle
 )
-from io_utils import (
-    ConfigModel,
-    load_config
-)
 from .cell import (
     Cell,
     Direction,
@@ -18,18 +14,22 @@ from .cell import (
 
 class MazeGenerator:
     """Generate maze based on validated configuration"""
-    def __init__(self, config_file: str) -> None:
-        self.config: Final[ConfigModel] = load_config(config_file)
+    def __init__(self,
+                 height: int,
+                 width: int,
+                 entry: tuple[int, int],
+                 exit: tuple[int, int],
+                 perfect: bool,
+                 seeds: int | None) -> None:
 
-        self.height: Final[int] = self.config.HEIGHT
-        self.width: Final[int] = self.config.WIDTH
-        self.entry: Final[tuple[int, int]] = self.config.ENTRY
-        self.exit: Final[tuple[int, int]] = self.config.EXIT
-        self.output_file: Final[str] = self.config.OUTPUT_FILE
-        self.perfect: Final[bool] = self.config.PERFECT
+        self.height: Final[int] = height
+        self.width: Final[int] = width
+        self.entry: Final[tuple[int, int]] = entry
+        self.exit: Final[tuple[int, int]] = exit
+        self.perfect: Final[bool] = perfect
         self.seed: Final[int | None] = (
-            self.config.SEED
-            if self.config.SEED is not None
+            seeds
+            if seeds is not None
             else randint(0, 1000)
         )
         seed(self.seed)
@@ -70,11 +70,12 @@ class MazeGenerator:
                 ):
                     print("[!] Entry and Exit must not be in 42 pattern")
                     exit(0)
-                grid[maze_row][maze_col].visited = True
                 grid[maze_row][maze_col].is_42 = True
             return grid
         else:
-            print("[!] Height and width is too small for 42 pattern  so ommiting\n")
+            print(
+                "Height and width is too small for 42 pattern so ommiting\n"
+                )
             return grid
 
     def dfs(self, cell: Cell):
@@ -94,37 +95,114 @@ class MazeGenerator:
 
             neighbor = self.grid[new_row][new_col]
 
-            if not neighbor.visited:
+            if not neighbor.visited and not neighbor.is_42:
                 current_cell.walls = current_cell.walls & ~direction
                 neighbor.walls = neighbor.walls & ~direction.opposite
 
                 self.dfs(neighbor)
 
-    def print_maze(self):
-        print("+" + "----+" * self.width)
+    def count_open_walls(self, cell):
+        count = 0
 
+        for direction in Direction:
+            if not (cell.walls & direction):
+                count += 1
+        return count
+
+    def add_loops(self):
+
+        cells = []
         for row in self.grid:
-            line = "|"
-
             for cell in row:
-                if cell.is_42:
-                    value = "\033[31m 42 \033[0m"  # Red 42
-                else:
-                    value = "    "
+                if not cell.is_42:
+                    cells.append(cell)
 
-                if cell.walls & Direction.EAST:
-                    line += value + "|"
-                else:
-                    line += value + " "
+        shuffle(cells)
+        while True:
+            dead_end_found = False
 
-            print(line)
+            for cell in cells:
+                if self.count_open_walls(cell) != 1:
+                    continue
 
-            line = "+"
+                directions = list(Direction)
+                shuffle(directions)
 
+                for direction in directions:
+                    new_row = cell.row + direction.step[0]
+                    new_col = cell.col + direction.step[1]
+
+                    if not 0 <= new_row < self.height:
+                        continue
+                    if not 0 <= new_col < self.width:
+                        continue
+
+                    neighbor = self.grid[new_row][new_col]
+
+                    if (
+                        not neighbor.is_42
+                        and cell.walls & direction
+                    ):
+                        cell.walls &= ~direction
+                        neighbor.walls &= ~direction.opposite
+
+                        dead_end_found = True
+                        break
+
+                if dead_end_found:
+                    break
+
+            if not dead_end_found:
+                break
+
+    def reset_visited(self):
+        for row in self.grid:
             for cell in row:
-                if cell.walls & Direction.SOUTH:
-                    line += "----+"
-                else:
-                    line += "    +"
+                cell.visited = False
 
-            print(line)
+    def bfs(self):
+        self.reset_visited()
+        entry = self.grid[self.entry[0]][self.entry[1]]
+        exit = self.grid[self.exit[0]][self.exit[1]]
+
+        queue = [entry]
+        entry.visited = True
+        came_from = {}
+
+        while queue:
+            current = queue.pop(0)
+            if current == exit:
+                break
+            for direction in Direction:
+                new_row = current.row + direction.step[0]
+                new_col = current.col + direction.step[1]
+
+                if not 0 <= new_row < self.height:
+                    continue
+                if not 0 <= new_col < self.width:
+                    continue
+                neighbor = self.grid[new_row][new_col]
+                if not (current.walls & direction) and not neighbor.visited:
+                    came_from[neighbor] = current
+                    neighbor.visited = True
+                    queue.append(neighbor)
+
+        path = []
+        current = exit
+
+        while current != entry:
+            path.append(current)
+            current = came_from[current]
+        path.append(entry)
+
+        path.reverse()
+        return path
+
+    def generate_maze(self):
+        start_cell = self.grid[self.entry[0]][self.entry[1]]
+
+        if self.perfect:
+            self.dfs(start_cell)
+        else:
+            self.dfs(start_cell)
+            self.add_loops()

@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from sys import exit, argv
 from mazegen import MazeGenerator
+from io_utils import MazeOutput
+from io_utils import (
+    ConfigModel,
+    load_config
+)
 
 
 EXIT_OK = 0
@@ -30,10 +35,27 @@ def main() -> int:
         return EXIT_MALFORMED
 
     try:
-        amazeing = MazeGenerator(argv[1])
-        start = amazeing.grid[0][0]
-        amazeing.dfs(start)
-        amazeing.print_maze()
+        config: ConfigModel = load_config(argv[1])
+        amazeing = MazeGenerator(
+            config.HEIGHT,
+            config.WIDTH,
+            config.ENTRY,
+            config.EXIT,
+            config.PERFECT,
+            config.SEED
+            )
+        amazeing.generate_maze()
+
+        path = amazeing.bfs()
+
+        output = MazeOutput(
+            amazeing.grid,
+            amazeing.entry,
+            amazeing.exit,
+            config.OUTPUT_FILE
+        )
+        output.save_maze(path)
+        output.print_maze(path)
     except FileNotFoundError as ERROR:
         print(ERROR)
     except PermissionError as ERROR:

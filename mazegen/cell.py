@@ -11,7 +11,7 @@ class Direction(IntFlag):
     WEST = 8
 
     @property
-    def opposite(self) -> tuple[int, int]:
+    def opposite(self) -> Direction:
         """the same wall seen from the neighbour cell"""
         return OPPOSITE[self]
 

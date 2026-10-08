@@ -1,8 +1,8 @@
 #this is a comment
-WIDTH=15
-HEIGHT=15
+WIDTH=9
+HEIGHT=9
 ENTRY=0,0
-EXIT=3,3
+EXIT=7,7
 OUTPUT_FILE=maze.txt
-PERFECT=True
-#SEED=11
+PERFECT=False
+# SEED=10
