@@ -12,6 +12,10 @@ from .cell import (
 )
 
 
+class MazeError(Exception):
+    pass
+
+
 class MazeGenerator:
     """Generate maze based on validated configuration"""
     def __init__(self,
@@ -68,8 +72,9 @@ class MazeGenerator:
                     or
                     (self.exit[0] == maze_row and self.exit[1] == maze_col)
                 ):
-                    print("[!] Entry and Exit must not be in 42 pattern")
-                    exit(0)
+                    raise MazeError(
+                        "[!] Entry and Exit must not be in 42 pattern"
+                        )
                 grid[maze_row][maze_col].is_42 = True
             return grid
         else:

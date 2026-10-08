@@ -3,6 +3,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+class ConfigError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class ConfigModel:
     """
@@ -32,7 +36,7 @@ def _parse_key_values(file_path: str) -> dict[str, str]:
 
     Raises:
         FileNotFoundError: if  there is no any config file
-        ValueError: if line has invalid syntax and duplicate keys
+        ConfigError: if line has invalid syntax and duplicate keys
         PersmissionError: if permission is denied to open file
 
     """
@@ -46,22 +50,22 @@ def _parse_key_values(file_path: str) -> dict[str, str]:
                 continue
 
             if "=" not in stripped:
-                raise ValueError(
+                raise ConfigError(
                     f"Syntax error in config file in line {line_num}"
                 )
 
             if stripped.count("=") != 1:
-                raise ValueError(
+                raise ConfigError(
                     f"Syntax error in config file in line {line_num}"
                 )
 
             key, value = stripped.split("=", 1)
             if not key or not value:
-                raise ValueError(
+                raise ConfigError(
                     f"Syntax error in config {key} in line {line_num}"
                 )
             if key in raw_config:
-                raise ValueError(
+                raise ConfigError(
                      f"Found duplictes of {key} config file in line {line_num}"
                 )
             raw_config[key] = value
@@ -76,7 +80,7 @@ def _required_keys(raw_config: dict[str, str]) -> None:
         raw_config: dictonary or key and value from configuration file
 
     Raises:
-        ValueError if required key is missing
+        ConfigError if required key is missing
     """
 
     required_keys: set[str] = {
@@ -86,7 +90,7 @@ def _required_keys(raw_config: dict[str, str]) -> None:
     }
     missing_key = required_keys - raw_config.keys()
     if missing_key:
-        raise ValueError("[Error]: Missing the required keys")
+        raise ConfigError("[Error]: Missing the required keys")
 
 
 def _parse_positive_int(key: str, value: str) -> int:
@@ -98,18 +102,18 @@ def _parse_positive_int(key: str, value: str) -> int:
         value: the string value which needed to be type caste to int
 
     Raises:
-        ValueError if value is negative and failed in type cast
+        ConfigError if value is negative and failed in type cast
     """
 
     try:
         parsed_value = int(value.strip())
     except ValueError as error:
-        raise ValueError(
+        raise ConfigError(
             f"{key} must be a valid integer string."
         ) from error
 
     if parsed_value <= 0:
-        raise ValueError(f"{key} must be positive")
+        raise ConfigError(f"{key} must be positive")
 
     return parsed_value
 
@@ -126,22 +130,22 @@ def _parse_coordinates(key: str, value: str) -> tuple[int, int]:
         return the tuple of coordinate
 
     Raises:
-         ValueError: if value is not valid in cordinate
+        ConfigError: if value is not valid in cordinate
     """
 
     if "," not in value:
-        raise ValueError(
+        raise ConfigError(
             f"Syntax error in cordinates for {key} must be seperated by ','"
             )
     if value.count(",") != 1:
-        raise ValueError(
+        raise ConfigError(
             f"Syntax error in coordinates {key}. expected only one comma"
         )
     x_str, y_str = value.split(",")
     x_str, y_str = x_str.strip(), y_str.strip()
 
     if not x_str or not y_str:
-        raise ValueError(
+        raise ConfigError(
            f"Syntax error in coordinates {key}: empty cordinate value."
         )
 
@@ -151,7 +155,7 @@ def _parse_coordinates(key: str, value: str) -> tuple[int, int]:
             raise ValueError("Coordinates must be positive")
         return x, y
     except ValueError as error:
-        raise ValueError(
+        raise ConfigError(
             f"Syntax error in coordinate for '{key}': "
             f"coordinates must be valid integers. {error}"
         )
@@ -169,7 +173,7 @@ def _parse_bool(key: str, value: str) -> bool:
         Returns the parsed bool value
 
     Raises:
-        ValueError: if non supporting bool is provided
+        ConfigError: if non supporting bool is provided
     """
 
     normal_value = value.strip()
@@ -178,7 +182,7 @@ def _parse_bool(key: str, value: str) -> bool:
         return True
     elif normal_value == "False":
         return False
-    raise ValueError(
+    raise ConfigError(
         f"Invalid configuration for {key}"
     )
 
@@ -195,7 +199,7 @@ def _parse_opt(key: str | None, value: str | None) -> int | None:
         int value or None id value is not provided
 
     Raises:
-        ValueError if value is negative and failed in type cast
+        ConfigError if value is negative and failed in type cast
     """
     if value is None or not value.strip():
         return None
@@ -203,12 +207,12 @@ def _parse_opt(key: str | None, value: str | None) -> int | None:
     try:
         parsed_value = int(value.strip())
     except ValueError as error:
-        raise ValueError(
+        raise ConfigError(
             f"{key} must be a valid integer string."
         ) from error
 
     if parsed_value <= 0:
-        raise ValueError(f"{key} must be positive")
+        raise ConfigError(f"{key} must be positive")
 
     return parsed_value
 
@@ -225,13 +229,16 @@ def _parse_file_name(key: str, value: str) -> str:
         the valid file name ends with .txt
 
     Raises:
-        value error  if extension does not match .txt
+        ConfigError  if extension does not match .txt
     """
     if not value.strip():
-        raise ValueError("File name needed to write the output of the maze")
+        raise ConfigError("File name needed to write the output of the maze")
 
     if not value.strip().endswith(".txt"):
-        raise ValueError(f"{key} doesn't have extension to write in the file")
+        raise ConfigError(
+            f"{key} doesn't have extension "
+            "to write in the file, eg: <filename>.txt"
+            )
     return value
 
 
@@ -252,7 +259,7 @@ def load_config(file_path: str) -> ConfigModel:
 
     Raises:
         FileNotFoundError: if  there is no any config file
-        ValueError: if there is some problem durung parsing
+        ConfigError: if there is some problem durung parsing
         PersmissionError: if permission is denied to open file
 
     """
@@ -268,15 +275,11 @@ def load_config(file_path: str) -> ConfigModel:
     seed = _parse_opt("SEED", raw_config.get("SEED"))
 
     if not _in_bounds(height, width, entry):
-        print("Entry should be in maze bounds")
-        return
+        raise ConfigError("Entry should be in maze bounds")
     if not _in_bounds(height, width, exit):
-        print("Exit should be in maze bounds")
-        return
+        raise ConfigError("Exit should be in maze bounds")
     if entry == exit:
-        print("Entry and Exit should be different")
-        return
-
+        raise ConfigError("Entry and Exit should be different")
     return ConfigModel(
         WIDTH=width,
         HEIGHT=height,

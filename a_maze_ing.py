@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from sys import exit, argv
-from mazegen import MazeGenerator
+from mazegen import MazeGenerator, MazeError
 from io_utils import MazeOutput
 from io_utils import (
     ConfigModel,
-    load_config
+    load_config,
+    ConfigError
 )
 
 
@@ -55,15 +56,11 @@ def main() -> int:
             config.OUTPUT_FILE
         )
         output.save_maze(path)
-        output.print_maze(path)
-    except FileNotFoundError as ERROR:
-        print(ERROR)
-    except PermissionError as ERROR:
-        print(ERROR)
-    except ValueError as ERROR:
-        print(ERROR)
-    except Exception as ERROR:
-        print(ERROR)
+        output.run(amazeing)
+    except (FileNotFoundError, PermissionError,
+            ValueError, Exception, ConfigError,
+            MazeError) as ERROR:
+        print(f"{type(ERROR).__name__}: {ERROR}")
     return EXIT_OK
 
 
