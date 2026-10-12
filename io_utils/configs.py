@@ -280,6 +280,8 @@ def load_config(file_path: str) -> ConfigModel:
         raise ConfigError("Exit should be in maze bounds")
     if entry == exit:
         raise ConfigError("Entry and Exit should be different")
+    if height > 1000 and width > 1000:
+        raise ConfigError("Height and width must be less than 1000")
     return ConfigModel(
         WIDTH=width,
         HEIGHT=height,

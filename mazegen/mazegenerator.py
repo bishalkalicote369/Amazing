@@ -1,128 +1,194 @@
 from __future__ import annotations
 
+from random import randint, seed, shuffle
 from typing import Final
-from random import (
-    randint,
-    seed,
-    shuffle
-)
-from .cell import (
-    Cell,
-    Direction,
-)
+
+from .cell import Cell, Direction
 
 
 class MazeError(Exception):
-    pass
+    """Exception raised when maze generation fails."""
 
 
 class MazeGenerator:
-    """Generate maze based on validated configuration"""
-    def __init__(self,
-                 height: int,
-                 width: int,
-                 entry: tuple[int, int],
-                 exit: tuple[int, int],
-                 perfect: bool,
-                 seeds: int | None) -> None:
+    """
+    Generate a maze based on validated configuration.
+    """
 
+    def __init__(
+        self,
+        height: int,
+        width: int,
+        entry: tuple[int, int],
+        exit: tuple[int, int],
+        perfect: bool,
+        seeds: int | None,
+    ) -> None:
+        """
+        Initialize the maze generator.
+
+        Args:
+            height: Height of the maze.
+            width: Width of the maze.
+            entry: Row and column coordinates of the entry.
+            exit: Row and column coordinates of the exit.
+            perfect: Whether to generate a perfect maze.
+            seeds: Optional integer seed for random generation.
+
+        Raises:
+            MazeError: If entry or exit overlaps the 42 pattern.
+        """
         self.height: Final[int] = height
         self.width: Final[int] = width
         self.entry: Final[tuple[int, int]] = entry
         self.exit: Final[tuple[int, int]] = exit
         self.perfect: Final[bool] = perfect
-        self.seed: Final[int | None] = (
-            seeds
-            if seeds is not None
-            else randint(0, 1000)
+        self.seed: Final[int] = (
+            seeds if seeds is not None else randint(0, 1000)
         )
+
         seed(self.seed)
-        self.grid = self.grid_init()
+        self.grid: list[list[Cell]] = self.grid_init()
 
-    def grid_init(self):
+    def grid_init(self) -> list[list[Cell]]:
+        """
+        Initialize the maze grid and place the 42 pattern.
 
-        grid = []
+        Create a grid of cells based on the maze dimensions.
+        Place the 42 pattern in the center when both dimensions
+        are large enough to contain the pattern.
+
+        Returns:
+            A two-dimensional list containing maze cells.
+
+        Raises:
+            MazeError: If entry or exit overlaps the 42 pattern.
+        """
+        grid: list[list[Cell]] = []
 
         for row in range(self.height):
-            current_row = []
+            current_row: list[Cell] = []
+
             for col in range(self.width):
                 current_row.append(Cell(row, col))
+
             grid.append(current_row)
 
         pattern_42: list[tuple[int, int]] = [
-                    (0, 0), (1, 0), (2, 0), (2, 1),
-                    (2, 2), (3, 2), (4, 2),  # 4
-                    (0, 4), (0, 5), (0, 6), (1, 6),
-                    (2, 6), (2, 5), (2, 4), (3, 4),
-                    (4, 4), (4, 5), (4, 6)  # 2
-                ]
-        patern_height = 5
+            (0, 0), (1, 0), (2, 0), (2, 1),
+            (2, 2), (3, 2), (4, 2),
+            (0, 4), (0, 5), (0, 6), (1, 6),
+            (2, 6), (2, 5), (2, 4), (3, 4),
+            (4, 4), (4, 5), (4, 6),
+        ]
+
+        pattern_height = 5
         pattern_width = 7
 
-        maze_height = len(grid)
-        maze_width = len(grid[0])
-        if maze_height > patern_height or maze_width > pattern_width:
-            start_row = (maze_height - patern_height) // 2
-            start_col = (maze_width - pattern_width) // 2
-            for p_r, p_c in pattern_42:
-                maze_row = p_r + start_row
-                maze_col = p_c + start_col
-                if (
-                    (self.entry[0] == maze_row and self.entry[1] == maze_col)
-                    or
-                    (self.exit[0] == maze_row and self.exit[1] == maze_col)
-                ):
-                    raise MazeError(
-                        "[!] Entry and Exit must not be in 42 pattern"
-                        )
-                grid[maze_row][maze_col].is_42 = True
-            return grid
-        else:
+        if (
+            self.height < pattern_height
+            or self.width < pattern_width
+        ):
             print(
-                "Height and width is too small for 42 pattern so ommiting\n"
-                )
+                "Height or width is too small for the 42 pattern. "
+                "Omitting the pattern."
+            )
             return grid
 
-    def dfs(self, cell: Cell):
+        start_row = (self.height - pattern_height) // 2
+        start_col = (self.width - pattern_width) // 2
 
+        for pattern_row, pattern_col in pattern_42:
+            maze_row = pattern_row + start_row
+            maze_col = pattern_col + start_col
+
+            if (
+                (self.entry == (maze_row, maze_col))
+                or (self.exit == (maze_row, maze_col))
+            ):
+                raise MazeError(
+                    "Entry and exit must not overlap the 42 pattern."
+                )
+
+            grid[maze_row][maze_col].is_42 = True
+
+        return grid
+
+    def dfs(self, cell: Cell) -> None:
+        """
+        Generate maze passages using depth-first search.
+
+        Visit neighboring cells recursively and remove the walls
+        between connected cells. Cells belonging to the 42 pattern
+        are excluded from maze generation.
+
+        Args:
+            cell: Cell from which the search begins.
+
+        Returns:
+            None.
+        """
         current_cell = self.grid[cell.row][cell.col]
         current_cell.visited = True
 
-        directions = list(Direction)
+        directions: list[Direction] = list(Direction)
         shuffle(directions)
 
         for direction in directions:
             new_row = current_cell.row + direction.step[0]
             new_col = current_cell.col + direction.step[1]
 
-            if not 0 <= new_row < self.height or not 0 <= new_col < self.width:
+            if not 0 <= new_row < self.height:
+                continue
+
+            if not 0 <= new_col < self.width:
                 continue
 
             neighbor = self.grid[new_row][new_col]
 
             if not neighbor.visited and not neighbor.is_42:
-                current_cell.walls = current_cell.walls & ~direction
-                neighbor.walls = neighbor.walls & ~direction.opposite
+                current_cell.walls &= ~direction
+                neighbor.walls &= ~direction.opposite
 
                 self.dfs(neighbor)
 
-    def count_open_walls(self, cell):
+    def count_open_walls(self, cell: Cell) -> int:
+        """
+        Count the open walls around a cell.
+
+        Args:
+            cell: Maze cell to check.
+
+        Returns:
+            Number of open walls around the cell.
+        """
         count = 0
 
         for direction in Direction:
             if not (cell.walls & direction):
                 count += 1
+
         return count
 
-    def add_loops(self):
+    def add_loops(self) -> None:
+        """
+        Add additional passages to the maze.
 
-        cells = []
+        Find dead-end cells and remove a wall to create additional
+        connections. Cells belonging to the 42 pattern are excluded.
+
+        Returns:
+            None.
+        """
+        cells: list[Cell] = []
+
         for row in self.grid:
             for cell in row:
                 if not cell.is_42:
                     cells.append(cell)
 
         shuffle(cells)
+
         while True:
             dead_end_found = False
 
@@ -130,7 +196,7 @@ class MazeGenerator:
                 if self.count_open_walls(cell) != 1:
                     continue
 
-                directions = list(Direction)
+                directions: list[Direction] = list(Direction)
                 shuffle(directions)
 
                 for direction in directions:
@@ -139,6 +205,7 @@ class MazeGenerator:
 
                     if not 0 <= new_row < self.height:
                         continue
+
                     if not 0 <= new_col < self.width:
                         continue
 
@@ -160,54 +227,20 @@ class MazeGenerator:
             if not dead_end_found:
                 break
 
-    def reset_visited(self):
-        for row in self.grid:
-            for cell in row:
-                cell.visited = False
+    def generate_maze(self) -> None:
+        """
+        Generate the maze using the selected generation mode.
 
-    def bfs(self):
-        self.reset_visited()
-        entry = self.grid[self.entry[0]][self.entry[1]]
-        exit = self.grid[self.exit[0]][self.exit[1]]
+        Use depth-first search to generate passages. If the maze
+        is not required to be perfect, add additional passages
+        to create loops.
 
-        queue = [entry]
-        entry.visited = True
-        came_from = {}
-
-        while queue:
-            current = queue.pop(0)
-            if current == exit:
-                break
-            for direction in Direction:
-                new_row = current.row + direction.step[0]
-                new_col = current.col + direction.step[1]
-
-                if not 0 <= new_row < self.height:
-                    continue
-                if not 0 <= new_col < self.width:
-                    continue
-                neighbor = self.grid[new_row][new_col]
-                if not (current.walls & direction) and not neighbor.visited:
-                    came_from[neighbor] = current
-                    neighbor.visited = True
-                    queue.append(neighbor)
-
-        path = []
-        current = exit
-
-        while current != entry:
-            path.append(current)
-            current = came_from[current]
-        path.append(entry)
-
-        path.reverse()
-        return path
-
-    def generate_maze(self):
+        Returns:
+            None.
+        """
         start_cell = self.grid[self.entry[0]][self.entry[1]]
 
-        if self.perfect:
-            self.dfs(start_cell)
-        else:
-            self.dfs(start_cell)
+        self.dfs(start_cell)
+
+        if not self.perfect:
             self.add_loops()

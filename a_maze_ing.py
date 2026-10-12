@@ -8,6 +8,7 @@ from io_utils import (
     load_config,
     ConfigError
 )
+from pathfinder import PathFinder
 
 
 EXIT_OK = 0
@@ -47,8 +48,14 @@ def main() -> int:
             )
         amazeing.generate_maze()
 
-        path = amazeing.bfs()
-
+        pathgen = PathFinder(
+            amazeing.height,
+            amazeing.width,
+            amazeing.entry,
+            amazeing.exit,
+            amazeing.grid
+        )
+        path = pathgen.bfs()
         output = MazeOutput(
             amazeing.grid,
             amazeing.entry,
@@ -56,7 +63,7 @@ def main() -> int:
             config.OUTPUT_FILE
         )
         output.save_maze(path)
-        output.run(amazeing)
+        output.run(pathgen, amazeing)
     except (FileNotFoundError, PermissionError,
             ValueError, Exception, ConfigError,
             MazeError) as ERROR:
